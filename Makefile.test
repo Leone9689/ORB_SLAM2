@@ -1,0 +1,39 @@
+
+
+run_tum_mono_1:
+	./Examples/Monocular/mono_tum Vocabulary/ORBvoc.bin Examples/Monocular/TUM1.yaml /data/slam/tum/rgbd_dataset_freiburg1_xyz/
+
+run_tum_rgbd_1:
+	./Examples/RGB-D/rgbd_tum Vocabulary/ORBvoc.bin Examples/RGB-D/TUM1.yaml  /data/slam/tum/rgbd_dataset_freiburg1_xyz/ Examples/RGB-D/associations/fr1_xyz.txt
+
+kitti_0:
+	./Examples/Monocular/mono_kitti Vocabulary/ORBvoc.bin Examples/Monocular/KITTI00-02.yaml /data/slam/kitti/dataset/sequences/00
+
+kitti_1:
+	./Examples/Monocular/mono_kitti Vocabulary/ORBvoc.bin Examples/Monocular/KITTI00-02.yaml /data/slam/kitti/dataset/sequences/01
+
+kitti_2:
+	./Examples/Monocular/mono_kitti Vocabulary/ORBvoc.bin Examples/Monocular/KITTI00-02.yaml /data/slam/kitti/dataset/sequences/02
+
+kitti_3:
+	./Examples/Monocular/mono_kitti Vocabulary/ORBvoc.bin Examples/Monocular/KITTI03.yaml /data/slam/kitti/dataset/sequences/03
+
+kitti_4:
+	./Examples/Monocular/mono_kitti Vocabulary/ORBvoc.bin Examples/Monocular/KITTI04-12.yaml /data/slam/kitti/dataset/sequences/04
+
+kitti_5:
+	./Examples/Monocular/mono_kitti Vocabulary/ORBvoc.bin Examples/Monocular/KITTI04-12.yaml /data/slam/kitti/dataset/sequences/05
+
+
+kitti_0s:
+	./Examples/Stereo/stereo_kitti Vocabulary/ORBvoc.bin Examples/Stereo/KITTI00-02.yaml /data/slam/kitti/dataset/sequences/00
+
+
+amani_1:
+	roslaunch my_launch/amani_1.launch
+
+nono_1:
+	roslaunch my_launch/nono_1.launch
+
+nono_2:
+	roslaunch my_launch/nono_2.launch
