@@ -1,0 +1,6 @@
+<launch>
+  <param name="orb_use_viewer" value="false"/>
+  <node pkg="ORB_SLAM2" type="Mono" name="ORB_SLAM2"  args="/home/poine/work/simone/trunk/ORB_SLAM2/Vocabulary/ORBvoc.bin /home/poine/work/simone/trunk/ORB_SLAM2/Data/Settings_pseye_18.yaml" cwd="node" output="screen">
+    </node>
+    <node pkg="rosbag" type="play" name="player" output="screen" args="--clock /data/slam/nono/2016-01-31-21-56-40.bag"/>
+</launch>
