@@ -27,7 +27,7 @@
 #include <thread>
 #include <pangolin/pangolin.h>
 #include <time.h>
-
+#include<iomanip>
 bool has_suffix(const std::string &str, const std::string &suffix) {
   std::size_t index = str.find(suffix, str.size() - suffix.size());
   return (index != std::string::npos);
@@ -85,14 +85,14 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
 
     //Create KeyFrame Database
     mpKeyFrameDatabase = new KeyFrameDatabase(*mpVocabulary);
-    map = new Map(); 
-    bool bMapLoad = map->Load("/home/leone/indigo_workspace/sandbox/ORB_SLAM2/Examples/ROS/ORB_SLAM2/Data/Map.map", *mpVocabulary);//载入map信息
-    if(!bMapLoad)
-    {
-      delete map;
-      map=NULL;
-      cerr << "No map file. " << endl;
-    }
+    map = new Map();                                                 
+    bool bMapLoad = map->Load("Map.map", *mpVocabulary);//载入map信息
+    if(!bMapLoad)                                                    
+    {                                                                
+      delete map;                                                    
+      map=NULL;                                                      
+      cerr << "No map file. " << endl;                               
+    }                                                                
     //Create the Map
     if (map==NULL) mpMap = new Map();
 	else {
@@ -115,7 +115,8 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
 
     //Initialize the Viewer thread and launch
     mpViewer = pViewer;//new Viewer(strSettingsFile);
-	if (mpViewer != NULL) {
+	  //mpViewer = NULL;
+    if (mpViewer != NULL) {
 	  mpViewer->Register(this);
 	  mptViewer = new thread(&Viewer::Run, mpViewer);
 	  mpTracker->SetViewer(mpViewer);
@@ -177,7 +178,7 @@ cv::Mat System::TrackStereo(const cv::Mat &imLeft, const cv::Mat &imRight, const
     return mpTracker->GrabImageStereo(imLeft,imRight,timestamp);
 }
 
-cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const double &timestamp)
+Frame* System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const double &timestamp)
 {
     if(mSensor!=RGBD)
     {
@@ -188,7 +189,7 @@ cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const doub
     // Check mode change
     {
         unique_lock<mutex> lock(mMutexMode);
-        if(mbActivateLocalizationMode)//false
+        if(mbActivateLocalizationMode)
         {
             mpLocalMapper->RequestStop();
 
@@ -198,12 +199,12 @@ cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const doub
                 usleep(1000);
             }
 
-            mpTracker->InformOnlyTracking(true);//只定位
+            mpTracker->InformOnlyTracking(true);
             mbActivateLocalizationMode = false;
         }
-        if(mbDeactivateLocalizationMode)//false
+        if(mbDeactivateLocalizationMode)
         {
-            mpTracker->InformOnlyTracking(false);//正常模式
+            mpTracker->InformOnlyTracking(false);
             mpLocalMapper->Release();
             mbDeactivateLocalizationMode = false;
         }
@@ -212,7 +213,7 @@ cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const doub
     // Check reset
     {
     unique_lock<mutex> lock(mMutexReset);
-    if(mbReset)//false
+    if(mbReset)
     {
         mpTracker->Reset();
         mbReset = false;
@@ -310,15 +311,8 @@ Map* System::GetMap() {return this->mpMap;}
 bool System::SaveMap(const string &filename) {
   cerr << "System Saving to " << filename << endl;
   return mpMap->Save(filename);
-  //return mpMap->savePcd(filename);
 }
 
-/*bool System::LoadMap(const string &filename, ORBVocabulary &voc)
-{
-  cerr << "System Loading to " << filename << endl;
-  return mpMap->Load(filename,voc);
-}
-*/
 int System::GetStatus() {
   return mpTracker->mState;
 }

@@ -44,8 +44,6 @@ MapDrawer::MapDrawer(const string &strSettingPath)
 void MapDrawer::DrawMapPoints()
 {
     const vector<MapPoint*> &vpMPs = mpMap->GetAllMapPoints();
-    //std::cout<<"三维点："<<vpMPs.size()<<std::endl;
-    
     const vector<MapPoint*> &vpRefMPs = mpMap->GetReferenceMapPoints();
 
     set<MapPoint*> spRefMPs(vpRefMPs.begin(), vpRefMPs.end());
