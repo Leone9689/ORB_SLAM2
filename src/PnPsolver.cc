@@ -418,7 +418,6 @@ void PnPsolver::compute_barycentric_coordinates(void)
   for(int i = 0; i < 3; i++)
     for(int j = 1; j < 4; j++)
       cc[3 * i + j - 1] = cws[j][i] - cws[0][i];
-
   cvInvert(&CC, &CC_inv, CV_SVD);
   double * ci = cc_inv;
   for(int i = 0; i < number_of_correspondences; i++) {

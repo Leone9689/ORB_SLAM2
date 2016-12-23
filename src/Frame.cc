@@ -37,7 +37,7 @@ float Frame::mfGridElementWidthInv, Frame::mfGridElementHeightInv;
 
   //static inline void InitializeClass(const float width, const float height, const cv::Mat K, const cv::Mat DistCoef);
 
-inline void Frame::InitializeScaleLevels() {
+void Frame::InitializeScaleLevels() {
   mnScaleLevels = mpORBextractorLeft->GetLevels();
   mfScaleFactor = mpORBextractorLeft->GetScaleFactor();
   mfLogScaleFactor = log(mfScaleFactor);
@@ -154,20 +154,19 @@ Frame::Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeSt
 
 Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeStamp, ORBextractor* extractor,ORBVocabulary* voc, const float &thDepth)
     :mpORBvocabulary(voc),mpORBextractorLeft(extractor),mpORBextractorRight(static_cast<ORBextractor*>(NULL)),
-     mTimeStamp(timeStamp), mThDepth(thDepth),pubFlag(false)
+     mTimeStamp(timeStamp), mThDepth(thDepth),mpRelocalizing(true)
 {
     // Frame ID
     mnId=nNextId++;
 
     // Scale Level Info
-	  InitializeScaleLevels();
+	InitializeScaleLevels();
 
     // ORB extraction
     ExtractORB(0,imGray);
 
     N = mvKeys.size();
-    
-    cloud = cv::Mat::zeros(N, 1, CV_32FC3 );
+
     if(mvKeys.empty())
         return;
 

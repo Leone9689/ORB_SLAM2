@@ -44,9 +44,9 @@ namespace ORB_SLAM2
 {
 
 Tracking::Tracking(System *pSys, ORBVocabulary* pVoc, Map *pMap, KeyFrameDatabase* pKFDB, const string &strSettingPath, const int sensor):
-    mSensor(sensor), mbOnlyTracking(false), mbVO(false), mpORBVocabulary(pVoc),
+   mSensor(sensor), mbOnlyTracking(false), mbVO(false), mpORBVocabulary(pVoc),
     mpKeyFrameDB(pKFDB), mpInitializer(static_cast<Initializer*>(NULL)), mpSystem(pSys),
-    mpMap(pMap), mnLastRelocFrameId(0),keyframe(0)
+    mpMap(pMap), mnLastRelocFrameId(0)
 {
   if (pMap->KeyFramesInMap() == 0)
 	mState = NO_IMAGES_YET;
@@ -55,6 +55,7 @@ Tracking::Tracking(System *pSys, ORBVocabulary* pVoc, Map *pMap, KeyFrameDatabas
 	mbOnlyTracking = true;
 	std::vector<KeyFrame*> akf = pMap->GetAllKeyFrames();
 	mpReferenceKF = akf[0];
+  mlRelativeFramePoses.push_back(mpReferenceKF->GetPose());
   }
 
     // Load camera parameters from settings file
@@ -175,7 +176,8 @@ cv::Mat Tracking::GrabImageStereo(const cv::Mat &imRectLeft, const cv::Mat &imRe
     return mCurrentFrame.mTcw.clone();
 }
 
-cv::Mat Tracking::GrabImageRGBD(const cv::Mat &imRGB,const cv::Mat &imD, const double &timestamp)
+
+Frame* Tracking::GrabImageRGBD(const cv::Mat &imRGB,const cv::Mat &imD, const double &timestamp)
 {
     mImGray = imRGB;
     cv::Mat imDepth = imD;
@@ -198,13 +200,12 @@ cv::Mat Tracking::GrabImageRGBD(const cv::Mat &imRGB,const cv::Mat &imD, const d
     if(mDepthMapFactor!=1 || imDepth.type()!=CV_32F);
     imDepth.convertTo(imDepth,CV_32F,mDepthMapFactor);
 
-    mCurrentFrame = Frame(mImGray,imDepth,timestamp,mpORBextractorLeft,mpORBVocabulary,mThDepth);//4
+    mCurrentFrame = Frame(mImGray,imDepth,timestamp,mpORBextractorLeft,mpORBVocabulary,mThDepth);
 
     Track();
 
+    return &mCurrentFrame;
     //return mCurrentFrame.mTcw.clone();
-    return mCurrentFrame.cloud;
-
 }
 
 
@@ -245,15 +246,15 @@ bool Tracking::_Track_full() {
 	  // Local Mapping might have changed some MapPoints tracked in last frame
 	  CheckReplacedInLastFrame();
 	  
-	  if(mVelocity.empty() || mCurrentFrame.mnId<mnLastRelocFrameId+2)//第一帧时，mVelocity为空
+	  if(mVelocity.empty() || mCurrentFrame.mnId<mnLastRelocFrameId+2)
 		{
 		  bOK = TrackReferenceKeyFrame();
 		}
 	  else
 		{
-      bOK = TrackWithMotionModel();//使用运动模型来track
+		  bOK = TrackWithMotionModel();
 		  if(!bOK)
-			bOK = TrackReferenceKeyFrame();//如果失败，使用帧的方式
+			bOK = TrackReferenceKeyFrame();
 		}
 	}
   else
@@ -369,30 +370,22 @@ void Tracking::Track()
         bool bOK;
 
         // Initial camera pose estimation using motion model or relocalization (if tracking is lost)
-        if(!mbOnlyTracking)//正常时执行这条
+        if(!mbOnlyTracking)
         {
-          //std::cout<<"调试"<<std::endl;
 		    // Local Mapping is activated. This is the normal behaviour, unless
             // you explicitly activate the "only tracking" mode.
-          bOK = _Track_full();
+		  bOK = _Track_full();
         }
         else
         {
-          //std::cout<<"调试1"<<std::endl;
-		      bOK = _Track_loc_only();//用于重定位
-          //if(bOK)
-          //  mbOnlyTracking =false;
-		    }
+		  bOK = _Track_loc_only();
+		}
         mCurrentFrame.mpReferenceKF = mpReferenceKF;
-
         // If we have an initial estimation of the camera pose and matching. Track the local map.
         if(!mbOnlyTracking)
         {
             if(bOK)
-            {
-                //std::cout<<"调试1"<<std::endl;
                 bOK = TrackLocalMap();
-            }
         }
         else
         {
@@ -401,19 +394,18 @@ void Tracking::Track()
             // the camera we will use the local map again.
             if(bOK && !mbVO)
                 bOK = TrackLocalMap();
-            if(bOK)
-              mbOnlyTracking =false;
-        }
+            if(bOK)                            
+                mbOnlyTracking =false;//切换状态 
 
-        if(bOK)
-        {
-            mState = OK;
         }
+        mCurrentFrame.mpRelocalizing = mbOnlyTracking; 
+        if(bOK)
+            mState = OK;
         else
             mState=LOST;
 
         // Update drawer
-        if (mpViewer != NULL) mpViewer->UpdateFrame(this);//3
+        if (mpViewer != NULL) mpViewer->UpdateFrame(this);
 
         // If tracking were good, check if we insert a keyframe
         if(bOK)
@@ -485,10 +477,10 @@ void Tracking::Track()
 
         mLastFrame = Frame(mCurrentFrame);
     }
-
     // Store frame pose information to retrieve the complete camera trajectory afterwards.
     if(!mCurrentFrame.mTcw.empty())
     {
+        //std::cout<<"调试1:"<<mlRelativeFramePoses.size()<<std::endl;
 	    //cerr << "in tracking: !mCurrentFrame.mTcw.empty(), state " << mState << endl;
         cv::Mat Tcr = mCurrentFrame.mTcw*mCurrentFrame.mpReferenceKF->GetPoseInverse();
         mlRelativeFramePoses.push_back(Tcr);
@@ -498,6 +490,9 @@ void Tracking::Track()
     }
     else
     {
+        //std::cout<<"调试2:"<<mlRelativeFramePoses.size()<<std::endl;
+        //if(mlRelativeFramePoses.back().empty())
+        //std::cout<<"调试"<<std::endl;
         // This can happen if tracking is lost
         mlRelativeFramePoses.push_back(mlRelativeFramePoses.back());
         mlpReferences.push_back(mlpReferences.back());
@@ -528,9 +523,9 @@ void Tracking::StereoInitialization()
             if(z>0)
             {
                 cv::Mat x3D = mCurrentFrame.UnprojectStereo(i);
-                MapPoint* pNewMP = new MapPoint(x3D,pKFini,mpMap);//2
+                MapPoint* pNewMP = new MapPoint(x3D,pKFini,mpMap);
                 pNewMP->AddObservation(pKFini,i);
-                pKFini->AddMapPoint(pNewMP,i);//1
+                pKFini->AddMapPoint(pNewMP,i);
                 pNewMP->ComputeDistinctiveDescriptors();
                 pNewMP->UpdateNormalAndDepth();
                 mpMap->AddMapPoint(pNewMP);
@@ -767,13 +762,13 @@ bool Tracking::TrackReferenceKeyFrame()
 
     int nmatches = matcher.SearchByBoW(mpReferenceKF,mCurrentFrame,vpMapPointMatches);
 
-    if(nmatches<15)//匹配点不够
+    if(nmatches<15)
         return false;
 
     mCurrentFrame.mvpMapPoints = vpMapPointMatches;
     mCurrentFrame.SetPose(mLastFrame.mTcw);
 
-    Optimizer::PoseOptimization(&mCurrentFrame);//g2o优化
+    Optimizer::PoseOptimization(&mCurrentFrame);
 
     // Discard outliers
     int nmatchesMap = 0;
@@ -1085,11 +1080,9 @@ void Tracking::CreateNewKeyFrame()
 
     mpReferenceKF = pKF;
     mCurrentFrame.mpReferenceKF = pKF;
-    mCurrentFrame.pubFlag = true;
+
     if(mSensor!=System::MONOCULAR)
     {
-       // keyframe++;
-       // std::cout<<"关键帧:"<<keyframe<<std::endl;
         mCurrentFrame.UpdatePoseMatrices();
 
         // We sort points by the measured depth by the stereo/RGBD sensor.
@@ -1097,7 +1090,6 @@ void Tracking::CreateNewKeyFrame()
         // If there are less than 100 close points we create the 100 closest.
         vector<pair<float,int> > vDepthIdx;
         vDepthIdx.reserve(mCurrentFrame.N);
-        
         for(int i=0; i<mCurrentFrame.N; i++)
         {
             float z = mCurrentFrame.mvDepth[i];
@@ -1130,8 +1122,7 @@ void Tracking::CreateNewKeyFrame()
                 if(bCreateNew)
                 {
                     cv::Mat x3D = mCurrentFrame.UnprojectStereo(i);
-                   
-                    MapPoint* pNewMP = new MapPoint(x3D,pKF,mpMap);//2
+                    MapPoint* pNewMP = new MapPoint(x3D,pKF,mpMap);
                     pNewMP->AddObservation(pKF,i);
                     pKF->AddMapPoint(pNewMP,i);
                     pNewMP->ComputeDistinctiveDescriptors();
@@ -1139,13 +1130,6 @@ void Tracking::CreateNewKeyFrame()
                     mpMap->AddMapPoint(pNewMP);
 
                     mCurrentFrame.mvpMapPoints[i]=pNewMP;
-                    
-                    cv::Mat wp = pNewMP->GetWorldPos();                  
-                    
-                    mCurrentFrame.cloud.at<cv::Vec3f>(i,1)[0] = wp.at<float>(0);
-                    mCurrentFrame.cloud.at<cv::Vec3f>(i,1)[1] = wp.at<float>(1);
-                    mCurrentFrame.cloud.at<cv::Vec3f>(i,1)[2] = wp.at<float>(2);
-                    
                     nPoints++;
                 }
                 else
@@ -1156,7 +1140,6 @@ void Tracking::CreateNewKeyFrame()
                 if(vDepthIdx[j].first>mThDepth && nPoints>100)
                     break;
             }
-
         }
     }
 
@@ -1373,7 +1356,7 @@ bool Tracking::Relocalization()
 
     // Relocalization is performed when tracking is lost
     // Track Lost: Query KeyFrame Database for keyframe candidates for relocalisation
-    vector<KeyFrame*> vpCandidateKFs = mpKeyFrameDB->DetectRelocalizationCandidates(&mCurrentFrame);//根据语义词典得到的候选帧
+    vector<KeyFrame*> vpCandidateKFs = mpKeyFrameDB->DetectRelocalizationCandidates(&mCurrentFrame);
 
     if(vpCandidateKFs.empty())
         return false;
@@ -1413,7 +1396,7 @@ bool Tracking::Relocalization()
                 PnPsolver* pSolver = new PnPsolver(mCurrentFrame,vvpMapPointMatches[i]);
                 pSolver->SetRansacParameters(0.99,10,300,4,0.5,5.991);
                 vpPnPsolvers[i] = pSolver;
-                nCandidates++;//筛选出匹配点数目丰富的候选帧
+                nCandidates++;
             }
         }
     }

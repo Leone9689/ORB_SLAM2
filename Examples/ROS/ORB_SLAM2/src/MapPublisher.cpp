@@ -1,26 +1,42 @@
 #include "MapPublisher.hpp"
 
 
-namespace ROS_ORB_SLAM
+namespace ORB_SLAM2
 {
 
 MapPublisher::MapPublisher()
 {
-  const char* MAP_FRAME_ID = "/ORB_SLAM/World";
+  const char* MAP_FRAME_ID = "/world";
   //const char* MAP_FRAME_ID = "map";
   const char* CAMERA_NAMESPACE = "Camera";
-  fCameraSize=0.04;
+  const char* POINTS_NAMESPACE = "MapPoints";    
+ 
+  fPointSize=0.03;                                        
+  mPoints.header.frame_id = MAP_FRAME_ID;                 
+  mPoints.ns = POINTS_NAMESPACE;                          
+  mPoints.id=0;                                           
+  mPoints.type = visualization_msgs::Marker::POINTS;      
+  mPoints.scale.x=fPointSize;                             
+  mPoints.scale.y=fPointSize;                             
+  mPoints.pose.orientation.w=1.0;                         
+  mPoints.action=visualization_msgs::Marker::ADD;         
+  mPoints.color.a = 1.0;                                  
+
+  fCameraSize=0.4;
   mCurrentCamera.header.frame_id = MAP_FRAME_ID;
   mCurrentCamera.ns = CAMERA_NAMESPACE;
   mCurrentCamera.id=4;
   mCurrentCamera.type = visualization_msgs::Marker::LINE_LIST;
-  mCurrentCamera.scale.x=0.001;//0.2; 0.03
+  mCurrentCamera.scale.x=0.03;//0.2; 0.03
   mCurrentCamera.pose.orientation.w=1.0;
   mCurrentCamera.action=visualization_msgs::Marker::ADD;
   mCurrentCamera.color.g=1.0f;
   mCurrentCamera.color.a = 1.0;
 
   publisher = nh.advertise<visualization_msgs::Marker>("/ORB_SLAM/Camera", 10);
+
+  //publisher.publish(mPoints);             
+  //publisher.publish(mCurrentCamera);
 
 } 
 
@@ -81,6 +97,23 @@ void MapPublisher::PublishCurrentCamera(const cv::Mat &Tcw)
    
    publisher.publish(mCurrentCamera);
 }
+
+void MapPublisher::PublishMapPoints(cv::Mat &cloud)
+{            
+    mPoints.points.clear();
+    for(int i=0;i<cloud.rows;i++)
+    {
+      geometry_msgs::Point p; 
+      p.x =  cloud.at<cv::Vec3f>(i,0)[0];
+      p.y =  cloud.at<cv::Vec3f>(i,0)[1];
+      p.z =  cloud.at<cv::Vec3f>(i,0)[2];
+      mPoints.points.push_back(p);
+    }
+
+  mPoints.header.stamp = ros::Time::now();
+  publisher.publish(mPoints);
+}            
+
 
 }  // namespace ROS_ORB_SLAM 
 

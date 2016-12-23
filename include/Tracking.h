@@ -56,7 +56,7 @@ public:
 
     // Preprocess the input and call Track(). Extract features and performs stereo matching.
     cv::Mat GrabImageStereo(const cv::Mat &imRectLeft,const cv::Mat &imRectRight, const double &timestamp);
-    cv::Mat GrabImageRGBD(const cv::Mat &imRGB,const cv::Mat &imD, const double &timestamp);
+    Frame* GrabImageRGBD(const cv::Mat &imRGB,const cv::Mat &imD, const double &timestamp);
     cv::Mat GrabImageMonocular(const cv::Mat &im, const double &timestamp);
 
     void SetLocalMapper(LocalMapping* pLocalMapper);
@@ -86,13 +86,13 @@ public:
     eTrackingState mState;
     eTrackingState mLastProcessedState;
 
-   
     // Input sensor
     int mSensor;
 
     // Current Frame
     Frame mCurrentFrame;
     cv::Mat mImGray;
+
     // Initialization Variables (Monocular)
     std::vector<int> mvIniLastMatches;
     std::vector<int> mvIniMatches;
@@ -213,7 +213,7 @@ protected:
     //bool ReadCameraCalibration(cv::FileStorage fSettings);
 	bool _Track_full();
 	bool _Track_loc_only();
-  int keyframe;
+
 };
 
 } //namespace ORB_SLAM

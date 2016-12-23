@@ -57,9 +57,9 @@ public:
     long unsigned int GetMaxKFid();
 
     void clear();
-    bool savePcd(const string &filename);
-  	bool Save(const string &filename);
-	  bool Load(const string &filename, ORBVocabulary &voc);
+
+	bool Save(const string &filename);
+	bool Load(const string &filename, ORBVocabulary &voc);
 
     vector<KeyFrame*> mvpKeyFrameOrigins;
 

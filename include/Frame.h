@@ -111,7 +111,7 @@ public:
     // Threshold close/far points. Close points are inserted from 1 view.
     // Far points are inserted as in the monocular case from 2 views.
     float mThDepth;
-    bool pubFlag;
+
     // Number of KeyPoints.
     int N;
 
@@ -146,7 +146,7 @@ public:
 
     // Camera pose.
     cv::Mat mTcw;
-    cv::Mat cloud;
+
     // Current and Next Frame id.
     static long unsigned int nNextId;
     long unsigned int mnId;
@@ -169,7 +169,7 @@ public:
     static float mnMinY;
     static float mnMaxY;
     static bool mbInitialComputations;
-
+    bool mpRelocalizing;
     // Undistort keypoints given OpenCV distortion parameters.
     // Only for the RGB-D case. Stereo must be already rectified!
     // (called in the constructor).
