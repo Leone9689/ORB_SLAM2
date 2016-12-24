@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 2.4.6)
 include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
 
 rosbuild_init()
@@ -9,9 +9,9 @@ ENDIF()
 
 MESSAGE("Build type: " ${ROS_BUILD_TYPE})
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}  -Wall  -O3 -march=armv8-a ")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall  -O3 -march=armv8-a")
-SET(CUDA_USE_STATIC_CUDA_RUNTIME OFF)
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}  -Wall  -O3 -march=native ")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall  -O3 -march=native")
+
 # Check C++11 or C++0x support
 include(CheckCXXCompilerFlag)
 CHECK_CXX_COMPILER_FLAG("-std=c++11" COMPILER_SUPPORTS_CXX11)
@@ -30,9 +30,15 @@ endif()
 
 LIST(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/../../../cmake_modules)
 
-#find_package(OpenCV 2.4.3 REQUIRED)
+find_package(OpenCV 2.4.3 REQUIRED)
 find_package(Eigen3 3.1.0 REQUIRED)
 find_package(Pangolin REQUIRED)
+
+# PCL #######################
+find_package(PCL 1.7 REQUIRED COMPONENTS common io)
+include_directories(${PCL_INCLUDE_DIRS})
+link_directories(${PCL_LIBRARY_DIRS})
+add_definitions(${PCL_DEFINITIONS})
 
 include_directories(
 ${PROJECT_SOURCE_DIR}
@@ -42,27 +48,30 @@ ${Pangolin_INCLUDE_DIRS}
 )
 
 set(LIBS 
-#${OpenCV_LIBS} 
+${OpenCV_LIBS} 
 ${EIGEN3_LIBS}
 ${Pangolin_LIBRARIES}
-${PROJECT_SOURCE_DIR}/../../../Thirdparty/DBoW2/lib/libDBoW2.so
 ${PROJECT_SOURCE_DIR}/../../../Thirdparty/g2o/lib/libg2o.so
+${PROJECT_SOURCE_DIR}/../../../Thirdparty/DBoW2/lib/libDBoW2.so
 ${PROJECT_SOURCE_DIR}/../../../lib/libORB_SLAM2.so
 )
-
-#uncomment if you have defined messages  
-rosbuild_genmsg()                        
-#uncomment if you have defined services  
-rosbuild_gensrv()                        
+#uncomment if you have defined messages
+rosbuild_genmsg()
+#uncomment if you have defined services
+rosbuild_gensrv()
 
 # Node for RGB-D camera
 rosbuild_add_executable(RGBD
 src/ros_rgbd.cc
+src/CloudPublisher.cpp
 src/MapPublisher.cpp
-src/OdomPublisher.cpp
+src/FramePublisher.cpp
+#src/IMUErrorModel.cpp
+#src/IMU_constraint.cpp
 )
 
 target_link_libraries(RGBD
 ${LIBS}
 )
-rosbuild_add_executable(save_map_client src/save_map_client.cpp) 
+
+rosbuild_add_executable(save_map_client src/save_map_client.cpp)

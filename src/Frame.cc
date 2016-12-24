@@ -37,7 +37,7 @@ float Frame::mfGridElementWidthInv, Frame::mfGridElementHeightInv;
 
   //static inline void InitializeClass(const float width, const float height, const cv::Mat K, const cv::Mat DistCoef);
 
-void Frame::InitializeScaleLevels() {
+inline void Frame::InitializeScaleLevels() {
   mnScaleLevels = mpORBextractorLeft->GetLevels();
   mfScaleFactor = mpORBextractorLeft->GetScaleFactor();
   mfLogScaleFactor = log(mfScaleFactor);
@@ -96,7 +96,7 @@ Frame::Frame()
 {}
 
 //Copy Constructor
-Frame::Frame(const Frame &frame)
+/*Frame::Frame(const Frame &frame)
     :mpORBvocabulary(frame.mpORBvocabulary), mpORBextractorLeft(frame.mpORBextractorLeft), mpORBextractorRight(frame.mpORBextractorRight),
      mTimeStamp(frame.mTimeStamp),
      mThDepth(frame.mThDepth), N(frame.N), mvKeys(frame.mvKeys),
@@ -115,12 +115,32 @@ Frame::Frame(const Frame &frame)
 
     if(!frame.mTcw.empty())
         SetPose(frame.mTcw);
-}
+}*/
 
+Frame::Frame(const Frame &frame)
+    :mpORBvocabulary(frame.mpORBvocabulary), mpORBextractorLeft(frame.mpORBextractorLeft), mpORBextractorRight(frame.mpORBextractorRight),
+     imu_observ(frame.imu_observ),speed_bias(frame.speed_bias),mTimeStamp(frame.mTimeStamp),
+     mThDepth(frame.mThDepth), N(frame.N), mvKeys(frame.mvKeys),
+     mvKeysRight(frame.mvKeysRight), mvKeysUn(frame.mvKeysUn),  mvuRight(frame.mvuRight),
+     mvDepth(frame.mvDepth), mBowVec(frame.mBowVec), mFeatVec(frame.mFeatVec),
+     mDescriptors(frame.mDescriptors.clone()), mDescriptorsRight(frame.mDescriptorsRight.clone()),
+     mvpMapPoints(frame.mvpMapPoints), mvbOutlier(frame.mvbOutlier), mnId(frame.mnId),
+     mpReferenceKF(frame.mpReferenceKF), mnScaleLevels(frame.mnScaleLevels),
+     mfScaleFactor(frame.mfScaleFactor), mfLogScaleFactor(frame.mfLogScaleFactor),
+     mvScaleFactors(frame.mvScaleFactors), mvInvScaleFactors(frame.mvInvScaleFactors),
+     mvLevelSigma2(frame.mvLevelSigma2), mvInvLevelSigma2(frame.mvInvLevelSigma2)
+{
+    for(int i=0;i<FRAME_GRID_COLS;i++)
+        for(int j=0; j<FRAME_GRID_ROWS; j++)
+            mGrid[i][j]=frame.mGrid[i][j];
+
+    if(!frame.mTcw.empty())
+        SetPose(frame.mTcw);
+}
 
 Frame::Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeStamp, ORBextractor* extractorLeft, ORBextractor* extractorRight, ORBVocabulary* voc, const float &thDepth)
     :mpORBvocabulary(voc),mpORBextractorLeft(extractorLeft),mpORBextractorRight(extractorRight), mTimeStamp(timeStamp), mThDepth(thDepth),
-     mpReferenceKF(static_cast<KeyFrame*>(NULL))
+     mnkeyId(-1),mpReferenceKF(static_cast<KeyFrame*>(NULL))
 {
     // Frame ID
     mnId=nNextId++;
@@ -152,21 +172,25 @@ Frame::Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeSt
     AssignFeaturesToGrid();
 }
 
-Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeStamp, ORBextractor* extractor,ORBVocabulary* voc, const float &thDepth)
+Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeStamp, 
+             ORBextractor* extractor,ORBVocabulary* voc, const float &thDepth,
+             const std::vector<Eigen::Matrix<double, 7,1> >& imu_measurements,     
+             const Eigen::Matrix<double, 9,1>& sb)
     :mpORBvocabulary(voc),mpORBextractorLeft(extractor),mpORBextractorRight(static_cast<ORBextractor*>(NULL)),
-     mTimeStamp(timeStamp), mThDepth(thDepth),mpRelocalizing(true)
+     imu_observ(imu_measurements),speed_bias(sb),mTimeStamp(timeStamp), mThDepth(thDepth),pubFlag(false),mnkeyId(-1)
 {
     // Frame ID
     mnId=nNextId++;
 
     // Scale Level Info
-	InitializeScaleLevels();
+	  InitializeScaleLevels();
 
     // ORB extraction
     ExtractORB(0,imGray);
 
     N = mvKeys.size();
-
+    
+    cloud = cv::Mat::zeros(N, 1, CV_32FC3 );
     if(mvKeys.empty())
         return;
 
@@ -183,10 +207,43 @@ Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeSt
     AssignFeaturesToGrid();
 }
 
+/*Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeStamp, 
+             ORBextractor* extractor,ORBVocabulary* voc, const float &thDepth)
+    :mpORBvocabulary(voc),mpORBextractorLeft(extractor),mpORBextractorRight(static_cast<ORBextractor*>(NULL)),
+     mTimeStamp(timeStamp), mThDepth(thDepth),pubFlag(false),mnkeyId(-1)
+{
+    // Frame ID
+    mnId=nNextId++;
+
+    // Scale Level Info
+	  InitializeScaleLevels();
+
+    // ORB extraction
+    ExtractORB(0,imGray);
+
+    N = mvKeys.size();
+    
+    cloud = cv::Mat::zeros(N, 1, CV_32FC3 );
+    if(mvKeys.empty())
+        return;
+
+    UndistortKeyPoints();
+
+    ComputeStereoFromRGBD(imDepth);
+
+    mvpMapPoints = vector<MapPoint*>(N,static_cast<MapPoint*>(NULL));
+    mvbOutlier = vector<bool>(N,false);
+
+    // This is done only for the first Frame (or after a change in the calibration)
+	InitializeClass();
+
+    AssignFeaturesToGrid();
+}
+*/
 
 Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor* extractor,ORBVocabulary* voc, const float &thDepth)
     :mpORBvocabulary(voc),mpORBextractorLeft(extractor),mpORBextractorRight(static_cast<ORBextractor*>(NULL)),
-     mTimeStamp(timeStamp), mThDepth(thDepth)
+     mTimeStamp(timeStamp), mThDepth(thDepth),mnkeyId(-1)
 {
     // Frame ID
     mnId=nNextId++;
@@ -217,6 +274,16 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor* extra
     AssignFeaturesToGrid();
 }
 
+/*Frame& Frame::operator =(const Frame& rv)
+{                                        
+  if(this!=&rv)                        
+  {                                    
+    this->Frame::~Frame();           
+    new(this) Frame(rv);             
+  }                                    
+  return *this;                        
+} */                                       
+
 void Frame::AssignFeaturesToGrid()
 {
     int nReserve = 0.5f*N/(FRAME_GRID_COLS*FRAME_GRID_ROWS);
@@ -246,7 +313,26 @@ void Frame::SetPose(cv::Mat Tcw)
     mTcw = Tcw.clone();
     UpdatePoseMatrices();
 }
+Sophus::SE3d Frame::GetSophusPose()
+{
+   Eigen::Matrix3d rcwEigen;
+   Eigen::Vector3d tcwEigen;
+   
+   cv::Mat rcwMat = mTcw.rowRange(0,3).colRange(0,3); 
+   cv::Mat tcwMat = mTcw.rowRange(0,3).col(3);  
+   
+   cv::cv2eigen(rcwMat,rcwEigen);
+   cv::cv2eigen(tcwMat,tcwEigen);
 
+   sTcw.rotationMatrix() = rcwEigen;
+   sTcw.translation() = tcwEigen;  
+   return sTcw;
+}
+cv::Mat Frame::GetPose()
+{
+    //unique_lock<mutex> lock(mMutexPose);
+    return mTcw.clone();
+}
 void Frame::UpdatePoseMatrices()
 { 
     mRcw = mTcw.rowRange(0,3).colRange(0,3);

@@ -177,7 +177,7 @@ namespace g2o {
     assert (_parameters.size() == _parameterIds.size());
     //cerr << __PRETTY_FUNCTION__ << ": encountered " << _parameters.size() << " parameters" << endl;
     for (size_t i=0; i<_parameters.size(); i++){
-      int index = _parameterIds[i];
+      int index = _parameterIds[i];//1
       *_parameters[i] = graph()->parameter(index);
       if (typeid(**_parameters[i]).name()!=_parameterTypes[i]){
         cerr << __PRETTY_FUNCTION__ << ": FATAL, parameter type mismatch - encountered " << typeid(**_parameters[i]).name() << "; should be " << _parameterTypes[i] << endl;

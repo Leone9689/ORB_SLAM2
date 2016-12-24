@@ -21,7 +21,10 @@
 #include<mutex>
 #include<climits>
 #include <sys/stat.h>
-#include <iostream> 
+#include <iostream>  
+#include <pcl/io/pcd_io.h>  
+#include <pcl/point_types.h> 
+
 #include "Map.h"
 #include "Converter.h"
 #include "Camera.h"
@@ -219,7 +222,8 @@ bool Map::Load(const string &filename, ORBVocabulary &voc) {
   ifstream f;
   f.open(filename.c_str());
   if(!f)
-    return false;
+	return false;
+
   long unsigned int nb_mappoints, max_id=0;
   f.read((char*)&nb_mappoints, sizeof(nb_mappoints));              
   cerr << "reading " << nb_mappoints << " mappoints" << endl; 
@@ -343,6 +347,30 @@ void Map::_WriteKeyFrame(ofstream &f, KeyFrame* kf, map<MapPoint*, unsigned long
   }
 
 }
+bool Map::savePcd(const string &filename)
+{
+  cerr << "Map: Saving to " << filename << endl;
+  cerr << "  writing " << mspMapPoints.size() << " mappoints" << endl;
+   
+  pcl::PointCloud<pcl::PointXYZ> cloud; 
+  cloud.width    = mspMapPoints.size();  
+  cloud.height   = 1;  
+  cloud.is_dense = false;  
+  cloud.points.resize (cloud.width * cloud.height); 
+  int cnt=0; 
+  for(auto mp: mspMapPoints)
+  {
+    cv::Mat wp = mp->GetWorldPos();
+    cloud.points[cnt].x = wp.at<float>(0);
+    cloud.points[cnt].y = wp.at<float>(1);
+    cloud.points[cnt].z = wp.at<float>(2);
+    cnt++;
+  }
+  pcl::io::savePCDFileASCII (filename, cloud);  
+  //std::cerr << "Saved " << cloud.points.size () << " data points to test_pcd.pcd." << std::endl;  
+  return true;
+}
+
 
 bool Map::Save(const string &filename) {
   cerr << "Map: Saving to " << filename << endl;

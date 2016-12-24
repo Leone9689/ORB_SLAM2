@@ -44,7 +44,7 @@ Camera.RGB: 1
 ThDepth: 50.0
 
 # Deptmap values factor 
-DepthMapFactor: 1000.0
+DepthMapFactor: 5000.0
 
 sample_interval: 0.01
 na: !!opencv-matrix
@@ -135,9 +135,4 @@ Viewer.ViewpointX: 0
 Viewer.ViewpointY: -0.7
 Viewer.ViewpointZ: -1.8
 Viewer.ViewpointF: 500
-
-#--------------------------------------------------------------------------------------------  
-# PointCloud Mapping                                                                           
-#--------------------------------------------------------------------------------------------  
-PointCloudMapping.Resolution: 0.08
 

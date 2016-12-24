@@ -25,48 +25,28 @@
 #include<chrono>
 
 #include<ros/ros.h>
-#include <std_msgs/String.h>
 #include <cv_bridge/cv_bridge.h>
 
 #include<opencv2/core/core.hpp>
 
 #include"../../../include/System.h"
-#include"../../../include/PangolinViewer.h"
-#include"../../../include/Viewer.h"
-
-#include "ros_viewer.hpp"
 
 using namespace std;
 
 class ImageGrabber
 {
 public:
-  ImageGrabber(ORB_SLAM2::System* pSLAM, bool publish_frame):mpSLAM(pSLAM){
-	_publish_frame = publish_frame;
-	_publish_pose = false;
-  }
-  
-  void GrabImage(const sensor_msgs::ImageConstPtr& msg);
-  void SaveMapCallback(const std_msgs::String::ConstPtr& msg);
+    ImageGrabber(ORB_SLAM2::System* pSLAM):mpSLAM(pSLAM){}
 
-  ORB_SLAM2::System* mpSLAM;
-  bool _publish_frame, _publish_pose;
+    void GrabImage(const sensor_msgs::ImageConstPtr& msg);
 
+    ORB_SLAM2::System* mpSLAM;
 };
 
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "Mono");
     ros::start();
-
-    bool use_pango_viewer, publish_frame, publish_pose;
-	cerr << "## ORB ROS parameters:" << endl;
-    ros::param::param<bool>("orb_use_pango_viewer", use_pango_viewer, true);
-    cerr << "# orb use pango viewer " << use_pango_viewer << endl;
-	ros::param::param<bool>("orb_publish_frame", publish_frame, true);
-    cerr << "# orb publish frame " << publish_frame << endl;
-	ros::param::param<bool>("orb_publish_pose", publish_pose, true);
-    cerr << "# orb publish pose " << publish_pose << endl;
 
     if(argc != 3)
     {
@@ -76,22 +56,16 @@ int main(int argc, char **argv)
     }    
 
     // Create SLAM system. It initializes all system threads and gets ready to process frames.
-	ORB_SLAM2::Viewer *viewer;
-	if (use_pango_viewer)
-	  viewer = new ORB_SLAM2::PangolinViewer(argv[2]);
-	else
-	  viewer = new ORB_SLAM2::RosViewer();
-    ORB_SLAM2::System SLAM(argv[1], argv[2], ORB_SLAM2::System::MONOCULAR, viewer);
+    ORB_SLAM2::System SLAM(argv[1],argv[2],ORB_SLAM2::System::MONOCULAR,true);
 
-    ImageGrabber igb(&SLAM, publish_frame);
-    
+    ImageGrabber igb(&SLAM);
+
     ros::NodeHandle nodeHandler;
-    ros::Subscriber sub1 = nodeHandler.subscribe("/camera/image_raw", 1, &ImageGrabber::GrabImage, &igb);
-	ros::Subscriber sub2 = nodeHandler.subscribe("/ORB_SLAM2/save_map", 1000, &ImageGrabber::SaveMapCallback, &igb);
+    ros::Subscriber sub = nodeHandler.subscribe("/camera/image_raw", 1, &ImageGrabber::GrabImage,&igb);
 
-	ros::spin();
-    
-	// Stop all threads
+    ros::spin();
+
+    // Stop all threads
     SLAM.Shutdown();
 
     // Save camera trajectory
@@ -101,14 +75,6 @@ int main(int argc, char **argv)
 
     return 0;
 }
-
-void ImageGrabber::SaveMapCallback(const std_msgs::String::ConstPtr& msg) {
-  
-  cerr << "Saving to " << msg->data.c_str() << endl;
-  mpSLAM->SaveMap(msg->data.c_str());
-
-}
-
 
 void ImageGrabber::GrabImage(const sensor_msgs::ImageConstPtr& msg)
 {
@@ -123,8 +89,8 @@ void ImageGrabber::GrabImage(const sensor_msgs::ImageConstPtr& msg)
         ROS_ERROR("cv_bridge exception: %s", e.what());
         return;
     }
-    //cv::Mat cam_pose = 
-	mpSLAM->TrackMonocular(cv_ptr->image, cv_ptr->header.stamp.toSec());
+
+    mpSLAM->TrackMonocular(cv_ptr->image,cv_ptr->header.stamp.toSec());
 }
 
 

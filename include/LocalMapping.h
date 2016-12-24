@@ -26,9 +26,10 @@
 #include "LoopClosing.h"
 #include "Tracking.h"
 #include "KeyFrameDatabase.h"
-
+#include "IMU_constraint.h"
 #include <mutex>
 
+//#include <deque> //for temporal window of frames 
 
 namespace ORB_SLAM2
 {
@@ -40,7 +41,8 @@ class Map;
 class LocalMapping
 {
 public:
-    LocalMapping(Map* pMap, const float bMonocular);
+    LocalMapping(Map* pMap,G2oIMUParameters* imuP,const float bMonocular,bool bImuData);
+    //LocalMapping(Map* pMap,const float bMonocular);
 
     void SetLoopCloser(LoopClosing* pLoopCloser);
 
@@ -50,6 +52,8 @@ public:
     void Run();
 
     void InsertKeyFrame(KeyFrame* pKF);
+    void InsertTemFrame(Frame* pTF);
+    void ExcludeTemFrame();
 
     // Thread Synch
     void RequestStop();
@@ -59,6 +63,8 @@ public:
     bool isStopped();
     bool stopRequested();
     bool AcceptKeyFrames();
+    void GetTemFrame();
+    //void ExcludeTemFrame(); 
     void SetAcceptKeyFrames(bool flag);
     bool SetNotStop(bool flag);
 
@@ -105,12 +111,17 @@ protected:
     Tracking* mpTracker;
 
     std::list<KeyFrame*> mlNewKeyFrames;
-
+    std::vector <Frame*> mlTemporalFrames;
+    std::vector <Frame*> mvpTemporalFrames;
+    std::list <KeyFrame*> mvpKeyFrames;
     KeyFrame* mpCurrentKeyFrame;
 
     std::list<MapPoint*> mlpRecentAddedMapPoints;
+     
+    G2oIMUParameters* imuPar;                                                                                 
 
     std::mutex mMutexNewKFs;
+    std::mutex mMutexNewTFs;
 
     bool mbAbortBA;
 
@@ -121,6 +132,10 @@ protected:
 
     bool mbAcceptKeyFrames;
     std::mutex mMutexAccept;
+
+    bool mbImuData;
+    unsigned int mbTemporalWinSize;
+    int tempNum;
 };
 
 } //namespace ORB_SLAM

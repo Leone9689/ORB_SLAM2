@@ -29,12 +29,18 @@
 namespace ORB_SLAM2
 {
 
-LocalMapping::LocalMapping(Map *pMap, const float bMonocular):
-    mbMonocular(bMonocular), mbResetRequested(false), mbFinishRequested(false), mbFinished(true), mpMap(pMap),
-    mbAbortBA(false), mbStopped(false), mbStopRequested(false), mbNotStop(false), mbAcceptKeyFrames(true)
+LocalMapping::LocalMapping(Map *pMap,G2oIMUParameters* imuP ,const float bMonocular,bool bImuData):
+    mbMonocular(bMonocular), mbResetRequested(false), mbFinishRequested(false), mbFinished(true), mpMap(pMap),imuPar(imuP),
+    mbAbortBA(false), mbStopped(false), mbStopRequested(false), mbNotStop(false), mbAcceptKeyFrames(true),mbImuData(bImuData),mbTemporalWinSize(5),tempNum(0)
 {
 }
 
+/*LocalMapping::LocalMapping(Map *pMap,const float bMonocular):
+    mbMonocular(bMonocular), mbResetRequested(false), mbFinishRequested(false), mbFinished(true), mpMap(pMap),
+    mbAbortBA(false), mbStopped(false), mbStopRequested(false), mbNotStop(false), mbAcceptKeyFrames(true),tempNum(0)
+{
+}
+*/
 void LocalMapping::SetLoopCloser(LoopClosing* pLoopCloser)
 {
     mpLoopCloser = pLoopCloser;
@@ -47,19 +53,19 @@ void LocalMapping::SetTracker(Tracking *pTracker)
 
 void LocalMapping::Run()
 {
-
     mbFinished = false;
 
     while(1)
     {
         // Tracking will see that Local Mapping is busy
-        SetAcceptKeyFrames(false);
+        SetAcceptKeyFrames(false);//不再接受关键帧
 
         // Check if there are keyframes in the queue
         if(CheckNewKeyFrames())
         {
+            //std::cout<<"调试1"<<std::endl;
             // BoW conversion and insertion in Map
-            ProcessNewKeyFrame();
+            ProcessNewKeyFrame();//将关键帧插入到map中
 
             // Check recent MapPoints
             MapPointCulling();
@@ -77,9 +83,11 @@ void LocalMapping::Run()
 
             if(!CheckNewKeyFrames() && !stopRequested())
             {
-                // Local BA
+                if(mbImuData)  
+                  GetTemFrame();
+                
                 if(mpMap->KeyFramesInMap()>2)
-                    Optimizer::LocalBundleAdjustment(mpCurrentKeyFrame,&mbAbortBA, mpMap);
+                    Optimizer::LocalBundleAdjustment(mpCurrentKeyFrame,mlTemporalFrames,&mbAbortBA, mpMap,mbImuData?imuPar:NULL,mbImuData);//local BA
 
                 // Check redundant local Keyframes
                 KeyFrameCulling();
@@ -118,11 +126,82 @@ void LocalMapping::InsertKeyFrame(KeyFrame *pKF)
     mlNewKeyFrames.push_back(pKF);
     mbAbortBA=true;
 }
+void LocalMapping::InsertTemFrame(Frame* pTF)
+{
+    unique_lock<mutex> lock(mMutexNewTFs);
+    
+    tempNum++;
+    mvpTemporalFrames.push_back(pTF);
+    /*std::cout<<"调试1"<<std::endl;
+    
+    std::cout<<"次数："<<tempNum<<std::endl;
+    if(mvpTemporalFrames.size()>=2)
+    {
+      int num = mvpTemporalFrames.size();
+      for (int i=1;i<num;i++)
+      //Frame*  TempFrame = mlTemporalFrames.back();
+      std::cout<<"ID："<<mvpTemporalFrames[i]->mTimeStamp-mvpTemporalFrames[i-1]->mTimeStamp<<std::endl;
+    }
+    std::cout<<"调试2"<<std::endl;*/
+    //Frame* kf ;
+    //kf = mvpTemporalFrames.back();
 
+    //std::cout<<"调试1："<<kf->mnId<<std::endl;
+    
+    //mbAbortBA=true;
+}
+void LocalMapping::ExcludeTemFrame()
+{
+    unique_lock<mutex> lock(mMutexNewTFs);
+    mvpTemporalFrames.pop_back();  
+}
+void LocalMapping::GetTemFrame()
+{
+    //unique_lock<mutex> lock(mMutexNewKFs);
+    unique_lock<mutex> lock(mMutexNewTFs);
+    
+    //std::cout<<"调试2："<<mpCurrentKeyFrame->mnlocalId<<std::endl;
+    for(int i=mvpTemporalFrames.size();i>0;i--)
+    {
+      //std::cout<<"调试1:"<<mvpTemporalFrames[i-1]->mnId<<std::endl;
+      //std::cout<<"调试2："<<currKey->mnlocalId<<std::endl;
+      if( (mvpTemporalFrames[i-1]->mnId) < (mpCurrentKeyFrame->mnlocalId) )
+        break;
+      else
+        mvpTemporalFrames.pop_back();
+    }
+    
+    if(mvpTemporalFrames.size()<=mbTemporalWinSize && mvpTemporalFrames.size()>0)
+    {
+      mlTemporalFrames.assign(mvpTemporalFrames.begin(), mvpTemporalFrames.end());
+    }
+    else if(mvpTemporalFrames.size()>mbTemporalWinSize)
+    {
+      mlTemporalFrames.assign(mvpTemporalFrames.end()-mbTemporalWinSize, mvpTemporalFrames.end());
+    }
+            
+    /*std::cout<<"调试1"<<std::endl;
+    
+    if(mlTemporalFrames.size())
+    {
+      int num = mlTemporalFrames.size();
+      for (int i=0;i<num;i++)
+      //Frame*  TempFrame = mlTemporalFrames.back();
+      std::cout<<"ID："<<mlTemporalFrames[i]->mnId<<std::endl;
+    }
+    std::cout<<"调试2"<<std::endl;*/
+    //mbAbortBA=true;
+    //mvpTemporalFrames.clear();
+}
 
 bool LocalMapping::CheckNewKeyFrames()
 {
     unique_lock<mutex> lock(mMutexNewKFs);
+    /*if(mlNewKeyFrames.size())
+    {
+      KeyFrame* curr = mlNewKeyFrames.back();
+      std::cout<<"关键帧ID:"<<curr->mnlocalId<<std::endl;
+    }*/
     return(!mlNewKeyFrames.empty());
 }
 
