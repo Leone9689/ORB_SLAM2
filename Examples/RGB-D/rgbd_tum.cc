@@ -136,7 +136,7 @@ int main(int argc, char **argv)
 
     // Save camera trajectory
     SLAM.SaveTrajectoryTUM("CameraTrajectory.txt");
-
+    SLAM.SaveMap("/home/leone/indigo_workspace/sandbox/ORB_SLAM2/Examples/ROS/ORB_SLAM2/Data/Map.map");
     return 0;
 }
 

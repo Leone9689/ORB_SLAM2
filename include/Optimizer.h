@@ -21,14 +21,21 @@
 #ifndef OPTIMIZER_H
 #define OPTIMIZER_H
 
+#include "Thirdparty/g2o/g2o/core/block_solver.h"
+#include "Thirdparty/g2o/g2o/core/optimization_algorithm_levenberg.h"
+#include "Thirdparty/g2o/g2o/solvers/linear_solver_eigen.h"
+#include "Thirdparty/g2o/g2o/types/types_six_dof_expmap.h"
+#include "Thirdparty/g2o/g2o/core/robust_kernel_impl.h"
+#include "Thirdparty/g2o/g2o/solvers/linear_solver_dense.h"
+#include "Thirdparty/g2o/g2o/types/types_seven_dof_expmap.h"
+
 #include "Map.h"
 #include "MapPoint.h"
 #include "KeyFrame.h"
 #include "LoopClosing.h"
 #include "Frame.h"
-
-#include "Thirdparty/g2o/g2o/types/types_seven_dof_expmap.h"
-
+#include "anchored_points.h"
+#include "IMU_constraint.h"
 namespace ORB_SLAM2
 {
 
@@ -42,7 +49,8 @@ public:
                                  const bool bRobust = true);
     void static GlobalBundleAdjustemnt(Map* pMap, int nIterations=5, bool *pbStopFlag=NULL,
                                        const unsigned long nLoopKF=0, const bool bRobust = true);
-    void static LocalBundleAdjustment(KeyFrame* pKF, bool *pbStopFlag, Map *pMap);
+    void static LocalBundleAdjustment(KeyFrame* pKF, std::vector <Frame*> pTemporalFrames ,bool *pbStopFlag, Map *pMap,G2oIMUParameters* g2o_imu,bool gImuData);
+    
     int static PoseOptimization(Frame* pFrame);
 
     // if bFixScale is true, 6DoF optimization (stereo,rgbd), 7DoF otherwise (mono)

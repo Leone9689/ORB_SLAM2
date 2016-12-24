@@ -12,8 +12,10 @@
   <depend package="image_transport"/>
   <depend package="cv_bridge"/>
 
-  <depend package="tf"/>  
-  <depend package="nav_msgs"/> 
+  <depend package="pcl_conversions"/>
+  <depend package="pcl_ros"/>
+
+
 </package>
 
 

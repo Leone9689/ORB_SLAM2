@@ -239,7 +239,7 @@ bool MapPoint::isBad()
     return mbBad;
 }
 
-void MapPoint::IncreaseVisible(int n)
+void MapPoint::IncreaseVisible(int n)//n=1
 {
     unique_lock<mutex> lock(mMutexFeatures);
     mnVisible+=n;

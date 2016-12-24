@@ -5,8 +5,10 @@
 #include<opencv2/core/core.hpp>
 #include<ros/ros.h>
 #include <visualization_msgs/Marker.h>
+#include<pcl/point_cloud.h>  
+#include<pcl_conversions/pcl_conversions.h>  
 #include<sensor_msgs/PointCloud2.h> 
-namespace ORB_SLAM2
+namespace ROS_ORB_SLAM
 {
 class MapPublisher
 {
@@ -14,7 +16,7 @@ public:
   MapPublisher();
   void PublishCurrentCamera(const cv::Mat &Tcw);
   //void PublishMapPoints(const std::vector<MapPoint*> &vpMPs);
-  void PublishMapPoints(cv::Mat &cloud);
+  void PublishMapPoints(pcl::PointCloud<pcl::PointXYZ> &cloud);
 private: 
   ros::NodeHandle nh;
   ros::Publisher publisher;

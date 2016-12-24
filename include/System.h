@@ -25,7 +25,9 @@
 #include<string>
 #include<thread>
 #include<opencv2/core/core.hpp>
+#include "Thirdparty/Sophus/sophus/se3.hpp"
 
+#include "Frame.h"
 #include "Tracking.h"
 #include "Map.h"
 #include "LocalMapping.h"
@@ -33,6 +35,7 @@
 #include "KeyFrameDatabase.h"
 #include "ORBVocabulary.h"
 #include "Viewer.h"
+#include "IMU_constraint.h"
 
 namespace ORB_SLAM2
 {
@@ -56,7 +59,8 @@ public:
 public:
 
     // Initialize the SLAM system. It launches the Local Mapping, Loop Closing and Viewer threads.
-    System(const string &strVocFile, const string &strSettingsFile, const eSensor sensor=MONOCULAR, Viewer* v=NULL, Map* m=NULL, ORBVocabulary* voc = NULL);
+    System(const string &strVocFile, const string &strSettingsFile,IMUProcessor* imuPro,bool pImuData,const eSensor sensor=MONOCULAR, Viewer* v=NULL, Map* m=NULL, ORBVocabulary* voc = NULL);
+    //System(const string &strVocFile, const string &strSettingsFile,const eSensor sensor=MONOCULAR, Viewer* v=NULL, Map* m=NULL, ORBVocabulary* voc = NULL);
 
     // Proccess the given stereo frame. Images must be synchronized and rectified.
     // Input images: RGB (CV_8UC3) or grayscale (CV_8U). RGB is converted to grayscale.
@@ -67,7 +71,10 @@ public:
     // Input image: RGB (CV_8UC3) or grayscale (CV_8U). RGB is converted to grayscale.
     // Input depthmap: Float (CV_32F).
     // Returns the camera pose (empty if tracking fails).
-    Frame* TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const double &timestamp);
+    //Frame &TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const double &timestamp); 
+    Frame* TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const double &timestamp, 
+                     const std::vector<Eigen::Matrix<double, 7,1> >& imu_measurements = std::vector<Eigen::Matrix<double,7,1> >(),
+                     const Sophus::SE3d *pred_Tr_delta = NULL, const Eigen::Matrix<double, 9,1>& sb=Eigen::Matrix<double,9,1>::Zero());
 
     // Proccess the given monocular frame
     // Input images: RGB (CV_8UC3) or grayscale (CV_8U). RGB is converted to grayscale.
@@ -107,7 +114,7 @@ public:
 
     // TODO: Save/Load functions
     bool SaveMap(const string &filename);
-    // LoadMap(const string &filename);
+    //bool LoadMap(const string &filename);
 
 
 	//	enum eTrackingState GetStatus();
@@ -145,6 +152,7 @@ private:
     // The viewer draws the map and the current camera pose. It uses Pangolin.
     Viewer* mpViewer;
 
+    G2oIMUParameters imu;                                                                                 
     // System threads: Local Mapping, Loop Closing, Viewer.
     // The Tracking thread "lives" in the main execution thread that creates the System object.
     std::thread* mptLocalMapping;
@@ -153,6 +161,7 @@ private:
 
     // Reset flag
     std::mutex mMutexReset;
+    bool sImuData;
     bool mbReset;
 
     // Change mode flags

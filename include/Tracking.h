@@ -52,11 +52,15 @@ class Tracking
 
 public:
     Tracking(System* pSys, ORBVocabulary* pVoc, Map* pMap,
-             KeyFrameDatabase* pKFDB, const string &strSettingPath, const int sensor);
+             KeyFrameDatabase* pKFDB, const string &strSettingPath, const int sensor,bool tImuData);
 
     // Preprocess the input and call Track(). Extract features and performs stereo matching.
     cv::Mat GrabImageStereo(const cv::Mat &imRectLeft,const cv::Mat &imRectRight, const double &timestamp);
-    Frame* GrabImageRGBD(const cv::Mat &imRGB,const cv::Mat &imD, const double &timestamp);
+    //Frame* GrabImageRGBD(const cv::Mat &imRGB,const cv::Mat &imD, const double &timestamp);
+    Frame* GrabImageRGBD(const cv::Mat &imRGB,const cv::Mat &imD, const double &timestamp,
+                         const std::vector<Eigen::Matrix<double, 7,1> >& imu_measurements,     
+                         const Sophus::SE3d *pred_Tr_delta, const Eigen::Matrix<double, 9,1>& sb);
+    
     cv::Mat GrabImageMonocular(const cv::Mat &im, const double &timestamp);
 
     void SetLocalMapper(LocalMapping* pLocalMapper);
@@ -86,13 +90,13 @@ public:
     eTrackingState mState;
     eTrackingState mLastProcessedState;
 
+   
     // Input sensor
     int mSensor;
 
     // Current Frame
     Frame mCurrentFrame;
     cv::Mat mImGray;
-
     // Initialization Variables (Monocular)
     std::vector<int> mvIniLastMatches;
     std::vector<int> mvIniMatches;
@@ -195,7 +199,6 @@ protected:
 
     //Current matches in frame
     int mnMatchesInliers;
-
     //Last Frame, KeyFrame and Relocalisation Info
     KeyFrame* mpLastKeyFrame;
     Frame mLastFrame;
@@ -213,7 +216,8 @@ protected:
     //bool ReadCameraCalibration(cv::FileStorage fSettings);
 	bool _Track_full();
 	bool _Track_loc_only();
-
+  int keyframe;
+  bool tImuData;
 };
 
 } //namespace ORB_SLAM

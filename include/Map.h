@@ -57,9 +57,9 @@ public:
     long unsigned int GetMaxKFid();
 
     void clear();
-
-	bool Save(const string &filename);
-	bool Load(const string &filename, ORBVocabulary &voc);
+    bool savePcd(const string &filename);
+  	bool Save(const string &filename);
+	  bool Load(const string &filename, ORBVocabulary &voc);
 
     vector<KeyFrame*> mvpKeyFrameOrigins;
 
@@ -78,10 +78,10 @@ protected:
 
     std::mutex mMutexMap;
 
-	void _WriteMapPoint(ofstream &f, MapPoint* mp);
-	void _WriteKeyFrame(ofstream &f, KeyFrame* kf,  map<MapPoint*, unsigned long int>& idx_of_mp);
-	MapPoint* _ReadMapPoint(ifstream &f);
-	KeyFrame* _ReadKeyFrame(ifstream &f, ORBVocabulary &voc, std::vector<MapPoint*> amp, ORBextractor* ex);
+  	void _WriteMapPoint(ofstream &f, MapPoint* mp);
+	  void _WriteKeyFrame(ofstream &f, KeyFrame* kf,  map<MapPoint*, unsigned long int>& idx_of_mp);
+	  MapPoint* _ReadMapPoint(ifstream &f);
+	  KeyFrame* _ReadKeyFrame(ifstream &f, ORBVocabulary &voc, std::vector<MapPoint*> amp, ORBextractor* ex);
 	
 };
 

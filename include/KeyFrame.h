@@ -123,7 +123,7 @@ public:
     static long unsigned int nNextId;
     long unsigned int mnId;
     const long unsigned int mnFrameId;
-
+    long unsigned int mnlocalId;
     const double mTimeStamp;
 
     // Grid (to speed up feature matching)

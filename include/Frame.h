@@ -22,15 +22,18 @@
 #define FRAME_H
 
 #include<vector>
+#include <Eigen/Dense>
 
 #include "MapPoint.h"
+#include "Thirdparty/Sophus/sophus/se3.hpp"
 #include "Thirdparty/DBoW2/DBoW2/BowVector.h"
 #include "Thirdparty/DBoW2/DBoW2/FeatureVector.h"
 #include "ORBVocabulary.h"
 #include "KeyFrame.h"
 #include "ORBextractor.h"
-
+#include "IMU_constraint.h"
 #include <opencv2/opencv.hpp>
+#include <opencv2/core/eigen.hpp>      
 
 namespace ORB_SLAM2
 {
@@ -52,8 +55,12 @@ public:
     Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeStamp, ORBextractor* extractorLeft, ORBextractor* extractorRight, ORBVocabulary* voc, const float &thDepth);
 
     // Constructor for RGB-D cameras.
-    Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeStamp, ORBextractor* extractor,ORBVocabulary* voc, const float &thDepth);
-
+    Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeStamp, 
+          ORBextractor* extractor,ORBVocabulary* voc, const float &thDepth,
+          const std::vector<Eigen::Matrix<double, 7,1> >& imu_measurements,     
+          const Eigen::Matrix<double, 9,1>& sb);
+    
+    //Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeStamp,ORBextractor* extractor,ORBVocabulary* voc, const float &thDepth);
     // Constructor for Monocular cameras.
     Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor* extractor, ORBVocabulary* voc, const float &thDepth);
 
@@ -65,7 +72,9 @@ public:
 
     // Set the camera pose.
     void SetPose(cv::Mat Tcw);
+    Sophus::SE3d GetSophusPose();
 
+    cv::Mat GetPose();
     // Computes rotation, translation and camera center matrices from the camera pose.
     void UpdatePoseMatrices();
 
@@ -104,14 +113,15 @@ public:
 
     // Feature extractor. The right is used only in the stereo case.
     ORBextractor* mpORBextractorLeft, *mpORBextractorRight;
-
+    std::vector<Eigen::Matrix<double, 7,1> > imu_observ;  
+    Eigen::Matrix<double, 9,1> speed_bias;
     // Frame timestamp.
     double mTimeStamp;
 
     // Threshold close/far points. Close points are inserted from 1 view.
     // Far points are inserted as in the monocular case from 2 views.
     float mThDepth;
-
+    bool pubFlag;
     // Number of KeyPoints.
     int N;
 
@@ -146,13 +156,21 @@ public:
 
     // Camera pose.
     cv::Mat mTcw;
-
+    cv::Mat cloud;
+    Sophus::SE3d sTcw;
     // Current and Next Frame id.
     static long unsigned int nNextId;
     long unsigned int mnId;
-
+    int mnkeyId;
     // Reference Keyframe.
+    
     KeyFrame* mpReferenceKF;
+
+    //Temporary pointer to g2o vertex
+    G2oVertexSE3*  v_kf_;
+    //g2o::VertexSE3Expmap* v_kf_;                                                            
+    G2oVertexSpeedBias* v_sb_; 
+        
 
     // Scale pyramid info.
     int mnScaleLevels;
@@ -169,7 +187,7 @@ public:
     static float mnMinY;
     static float mnMaxY;
     static bool mbInitialComputations;
-    bool mpRelocalizing;
+
     // Undistort keypoints given OpenCV distortion parameters.
     // Only for the RGB-D case. Stereo must be already rectified!
     // (called in the constructor).
@@ -183,6 +201,7 @@ public:
 private:
 
     // Rotation, translation and camera center
+    //Frame& operator= (const Frame&);
     cv::Mat mRcw;
     cv::Mat mtcw;
     cv::Mat mRwc;

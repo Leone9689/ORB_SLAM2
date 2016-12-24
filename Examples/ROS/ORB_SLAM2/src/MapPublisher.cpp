@@ -1,7 +1,7 @@
 #include "MapPublisher.hpp"
 
 
-namespace ORB_SLAM2
+namespace ROS_ORB_SLAM
 {
 
 MapPublisher::MapPublisher()
@@ -11,7 +11,7 @@ MapPublisher::MapPublisher()
   const char* CAMERA_NAMESPACE = "Camera";
   const char* POINTS_NAMESPACE = "MapPoints";    
  
-  fPointSize=0.03;                                        
+  fPointSize=0.005;                                        
   mPoints.header.frame_id = MAP_FRAME_ID;                 
   mPoints.ns = POINTS_NAMESPACE;                          
   mPoints.id=0;                                           
@@ -22,12 +22,12 @@ MapPublisher::MapPublisher()
   mPoints.action=visualization_msgs::Marker::ADD;         
   mPoints.color.a = 1.0;                                  
 
-  fCameraSize=0.4;
+  fCameraSize=0.04;
   mCurrentCamera.header.frame_id = MAP_FRAME_ID;
   mCurrentCamera.ns = CAMERA_NAMESPACE;
   mCurrentCamera.id=4;
   mCurrentCamera.type = visualization_msgs::Marker::LINE_LIST;
-  mCurrentCamera.scale.x=0.03;//0.2; 0.03
+  mCurrentCamera.scale.x=0.001;//0.2; 0.03
   mCurrentCamera.pose.orientation.w=1.0;
   mCurrentCamera.action=visualization_msgs::Marker::ADD;
   mCurrentCamera.color.g=1.0f;
@@ -98,15 +98,15 @@ void MapPublisher::PublishCurrentCamera(const cv::Mat &Tcw)
    publisher.publish(mCurrentCamera);
 }
 
-void MapPublisher::PublishMapPoints(cv::Mat &cloud)
+void MapPublisher::PublishMapPoints(pcl::PointCloud<pcl::PointXYZ> &cloud)
 {            
     mPoints.points.clear();
-    for(int i=0;i<cloud.rows;i++)
+    for(unsigned int i=0;i<cloud.width;i++)
     {
       geometry_msgs::Point p; 
-      p.x =  cloud.at<cv::Vec3f>(i,0)[0];
-      p.y =  cloud.at<cv::Vec3f>(i,0)[1];
-      p.z =  cloud.at<cv::Vec3f>(i,0)[2];
+      p.x = cloud.points[i].x;
+      p.y = cloud.points[i].y;
+      p.z = cloud.points[i].z;
       mPoints.points.push_back(p);
     }
 
