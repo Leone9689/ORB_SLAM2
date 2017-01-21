@@ -1,0 +1,14 @@
+<!-- This file shows the most important parameters in their default settings,
+     to make them easily available for beginners.
+
+     The openni driver is started automatically -->
+<launch>
+  <include file="$(find astra_launch)/launch/astra.launch"/>
+  <node pkg="miivii_orbslam2_ros" type="RGBD" name="miivii_orbslam2_ros" args="$(find miivii_orbslam2_ros)/Data/ORBvoc.bin $(find miivii_orbslam2_ros)/Data/Settings.yaml" output="screen" > 
+  <remap from="/miivii_vslam/rgb/image_raw" to="/camera/rgb/image_rect_color"/>
+  <remap from="/miivii_vslam/depth_registered/image_raw" to="/camera/depth_registered/sw_registered/image_rect_raw"/>
+  <remap from="/miivii_vslam/depth/camera_info" to="/camera/depth/camera_info"/>
+  <param name="use_pango_viewer" type="bool" value="false" />
+  <param name="use_imu_data" type="bool" value="false" />
+  </node>
+</launch>
